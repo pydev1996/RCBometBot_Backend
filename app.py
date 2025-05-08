@@ -3,82 +3,73 @@ from dotenv import load_dotenv
 from google import genai
 import os
 
-# Load environment variables from the .env file
+# Load environment variables from .env
 load_dotenv()
 
-# Get the API key from the environment variable
+# Setup Gemini client
 api_key = os.getenv("GENAI_API_KEY")
-
-# Initialize the GenAI client with the API key
 client = genai.Client(api_key=api_key)
+
 app = Flask(__name__)
 
-# Simple state tracking
-user_context = {"menu": "main", "submenu": None}
+# Track user state
+user_context = {"menu": "main"}
 
+# Main menu and submenus
 main_menu = {
-    "1": "Pregnancy Tips",
-    "2": "Child Growth Tracker",
-    "3": "Immunization Schedule",
-    "4": "Emergency Help",
-    "5": "Live Chat with Nurse",
-    "6": "Health Articles",
-    "7": "Book Appointment – Schedule a clinic or doctor visit",
-    "8": "Language Options – Switch to Kiswahili",
-    "9": "More Services – Family planning, antenatal classes, etc"
-}
-
-submenus = {
-    "Pregnancy Tips": {
-        "1": "1st Trimester (0–12 weeks)",
-        "2": "2nd Trimester (13–27 weeks)",
-        "3": "3rd Trimester (28–40 weeks)",
-        "4": "Nutrition Guide",
-        "5": "Danger Signs",
-        "6": "Mental Health",
-        "7": "FAQs",
-        "8": "Go Back"
+   "Pregnancy Tips": {
+        "1st Trimester (0–12 weeks)":"",
+        "2nd Trimester (13–27 weeks)":"",
+        "3rd Trimester (28–40 weeks)":"",
+         "Nutrition Guide":"",
+        "Danger Signs":"",
+        "Mental Health":"",
+        "FAQs":"",
+        "Go Back":""
     },
     "Child Growth Tracker": {
-        "1": "Newborn (0–2 months)",
-        "2": "Infant (3–12 months)",
-        "3": "Toddler (1–3 years)",
-        "4": "Go Back"
+        "Newborn (0–2 months)": "",
+        "Infant (3–12 months)": "",
+        "Toddler (1–3 years)": "",
+        "Go Back": ""
     },
     "Immunization Schedule": {
-        "1": "Birth to 6 months",
-        "2": "6–18 months",
-        "3": "2–5 years",
-        "4": "Go Back"
+        "Birth to 6 months": "",
+        "6–18 months": "",
+        "2–5 years": "",
+        "Go Back": ""
     },
+    "Emergency Help": {},
+    "Live Chat with Nurse": {},
+    "Health Articles": {},
     "Book Appointment – Schedule a clinic or doctor visit": {
-        "1": "Antenatal Visit",
-        "2": "Child Health Clinic",
-        "3": "Postnatal Checkup",
-        "4": "Family Planning",
-        "5": "Cancel Appointment",
-        "6": "Go Back"
+        "Antenatal Visit": "",
+        "Child Health Clinic": "",
+        "Postnatal Checkup": "",
+        "Family Planning": "",
+        "Cancel Appointment": "",
+        "Go Back": ""
     },
     "Language Options – Switch to Kiswahili": {
-        "1": "Switch to Kiswahili",
-        "2": "Switch to English",
-        "3": "Go Back"
+        "Switch to Kiswahili": "",
+        "Switch to English": "",
+        "Go Back": ""
     },
     "More Services – Family planning, antenatal classes, etc": {
-        "1": "Family Planning Advice",
-        "2": "Antenatal Classes",
-        "3": "Nutrition Counseling",
-        "4": "Mental Health Support",
-        "5": "Go Back"
+        "Family Planning Advice": "",
+        "Antenatal Classes": "",
+        "Nutrition Counseling": "",
+        "Mental Health Support": "",
+        "Go Back": ""
     }
 }
 
-mother_child_keywords = [
-    "pregnancy", "child growth", "immunization", "antenatal", "postnatal",
-    "family planning", "nutrition", "mental health", "danger signs","Go Back"
-]
 
-greetings = ["hi", "hello", "hey", "good morning", "good evening", "howdy", "hola"]  # List of greetings
+keywords = [
+    "pregnancy", "child", "baby", "growth", "immunization", "antenatal", "postnatal",
+    "mental health", "nutrition", "family planning", "clinic", "appointment"
+]
+greetings = ["hi", "hello", "hey", "good morning", "good evening", "howdy", "hola"]
 
 @app.route("/")
 def home():
@@ -87,86 +78,78 @@ def home():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        user_message = request.json.get("message", "").strip()
+        message = request.json.get("message", "").strip()
 
-        if not user_message:
+        if not message:
             return jsonify({"reply": "Please enter a message."})
 
-        # Check if the user greeted the bot
-        if any(greeting in user_message.lower() for greeting in greetings):
+        # Handle greetings
+        if message.lower() in greetings or message.lower() == "menu":
             user_context["menu"] = "main"
             return jsonify({
                 "reply": "*Main Menu:*",
-                "submenu": list(main_menu.values())
+                "submenu": list(main_menu.keys())
             })
 
-        # Reset to main menu
-        if user_message.lower() == "menu":
-            user_context["menu"] = "main"
-            return jsonify({
-                "reply": "*Main Menu:*",
-                "submenu": list(main_menu.values())
-            })
-        # Check if user input matches the mother/child related topics
-        # if not any(keyword.lower() in user_message.lower() for keyword in mother_child_keywords):
-        #     return jsonify({
-        #         "reply": "Sorry, this bot is only for mother and child issues. Please ask questions related to pregnancy, child growth, immunization, family planning, etc."
-        #     })
-
-        # Handle main menu
+        # Handle main menu selection by button text
         if user_context["menu"] == "main":
-            for key, value in main_menu.items():
-                if user_message.lower() == value.lower():
-                    user_context["menu"] = value
-                    submenu_items = submenus.get(value)
-                    if submenu_items:
-                        return jsonify({
-                            "reply": f"*{value} Submenu:*",
-                            "submenu": list(submenu_items.values())
-                        })
-                    else:
-                        # If no submenu, generate reply from Gemini
-                        response = client.models.generate_content(
-                            model="gemini-2.0-flash",
-                            contents=value
-                        )
-                        reply = response.text
-                        user_context["menu"] = "main"
-                        return jsonify({"reply": reply, "submenu": list(main_menu.values())})
+            if message in main_menu:
+                submenu = main_menu[message]
+                user_context["menu"] = message
+                if submenu:
+                    return jsonify({
+                        "reply": f"*{message} Submenu:*",
+                        "submenu": list(submenu.keys())
+                    })
+                else:
+                    # No submenu: call Gemini
+                    response = client.models.generate_content(
+                        model="gemini-2.0-flash",
+                        contents=message
+                    )
+                    user_context["menu"] = "main"
+                    return jsonify({
+                        "reply": response.text,
+                        "submenu": list(main_menu.keys())
+                    })
 
-        # Handle submenu logic
-        if user_context["menu"] in submenus:
-            current_submenu = submenus[user_context["menu"]]
-            for key, value in current_submenu.items():
-                if user_message.lower() == value.lower():
-                    if "go back" in value.lower():
-                        user_context["menu"] = "main"
-                        return jsonify({
-                            "reply": "*Main Menu:*",
-                            "submenu": list(main_menu.values())
-                        })
-                    else:
-                        prompt = f"{user_context['menu']} - {value}"
-                        response = client.models.generate_content(
-                            model="gemini-2.0-flash",
-                            contents=prompt)
-                        reply = response.text
-                        return jsonify({
-                            "reply": reply,
-                            "submenu": list(current_submenu.values())
-                        })
+        # Submenu selection
+        current_menu = user_context["menu"]
+        if current_menu in main_menu:
+            submenu = main_menu[current_menu]
+            if message in submenu:
+                if message.lower() == "go back":
+                    user_context["menu"] = "main"
+                    return jsonify({
+                        "reply": "*Main Menu:*",
+                        "submenu": list(main_menu.keys())
+                    })
+                else:
+                    # Use Gemini for submenu content
+                    prompt = f"{current_menu} - {message}"
+                    print(prompt)
+                    response = client.models.generate_content(
+                        model="gemini-2.0-flash",
+                        contents=prompt
+                    )
+                  
+                    return jsonify({
+                        "reply": response.text,
+                        "submenu": list(submenu.keys())
+                    })
 
-        if not any(keyword in user_message for keyword in mother_child_keywords):
-            return jsonify({
-                "reply": "This bot only answers questions related to pregnancy, child growth, immunization, and maternal health. Please select from the main menu."
-            })
-        # Fallback: Treat message as free input to Gemini
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=user_message
-        )
-        reply = response.text
-        return jsonify({"reply": reply})
+        # Fallback for health-related queries
+        if any(keyword in message.lower() for keyword in keywords):
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=message
+            )
+            return jsonify({"reply": response.text})
+
+        # Irrelevant query
+        return jsonify({
+            "reply": "Please use the buttons or ask about pregnancy, child health, or related services."
+        })
 
     except Exception as e:
         return jsonify({"reply": f"Error: {str(e)}"}), 500
