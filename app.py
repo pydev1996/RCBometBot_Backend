@@ -13,7 +13,10 @@ client = genai.Client(api_key=api_key)
 app = Flask(__name__)
 
 # Track user state
-user_context = {"menu": "main"}
+user_context = {
+    "menu": "main",
+    "language": "english"
+}
 
 # Main menu and submenus
 main_menu = {
@@ -64,7 +67,6 @@ main_menu = {
     }
 }
 
-
 keywords = [
     "pregnancy", "child", "baby", "growth", "immunization", "antenatal", "postnatal",
     "mental health", "nutrition", "family planning", "clinic", "appointment"
@@ -87,11 +89,34 @@ def chat():
         if message.lower() in greetings or message.lower() == "menu":
             user_context["menu"] = "main"
             return jsonify({
-                "reply": "*Main Menu:*",
+                "reply": "*Main Menu:*" if user_context["language"] == "english" else "*Menyu Kuu:*",
                 "submenu": list(main_menu.keys())
             })
 
-        # Handle main menu selection by button text
+        # Language Switching
+        if user_context["menu"] == "Language Options – Switch to Kiswahili":
+            if message == "Switch to Kiswahili":
+                user_context["language"] = "kiswahili"
+                user_context["menu"] = "main"
+                return jsonify({
+                    "reply": "✅ *Umechagua Kiswahili.*\n\n*Menyu Kuu:*",
+                    "submenu": list(main_menu.keys())
+                })
+            elif message == "Switch to English":
+                user_context["language"] = "english"
+                user_context["menu"] = "main"
+                return jsonify({
+                    "reply": "✅ *You have switched to English.*\n\n*Main Menu:*",
+                    "submenu": list(main_menu.keys())
+                })
+            elif message.lower() == "go back":
+                user_context["menu"] = "main"
+                return jsonify({
+                    "reply": "*Main Menu:*",
+                    "submenu": list(main_menu.keys())
+                })
+
+        # Handle main menu selection
         if user_context["menu"] == "main":
             if message in main_menu:
                 submenu = main_menu[message]
@@ -102,14 +127,20 @@ def chat():
                         "submenu": list(submenu.keys())
                     })
                 else:
-                    # No submenu: call Gemini
                     response = client.models.generate_content(
                         model="gemini-2.0-flash",
                         contents=message
                     )
+                    final_reply = response.text
+                    if user_context["language"] == "kiswahili":
+                        translated = client.models.generate_content(
+                            model="gemini-2.0-flash",
+                            contents=f"Translate this into Kiswahili: {final_reply}"
+                        )
+                        final_reply = translated.text
                     user_context["menu"] = "main"
                     return jsonify({
-                        "reply": response.text,
+                        "reply": final_reply,
                         "submenu": list(main_menu.keys())
                     })
 
@@ -125,28 +156,39 @@ def chat():
                         "submenu": list(main_menu.keys())
                     })
                 else:
-                    # Use Gemini for submenu content
                     prompt = f"{current_menu} - {message}"
-                    print(prompt)
                     response = client.models.generate_content(
                         model="gemini-2.0-flash",
                         contents=prompt
                     )
-                  
+                    final_reply = response.text
+                    if user_context["language"] == "kiswahili":
+                        translated = client.models.generate_content(
+                            model="gemini-2.0-flash",
+                            contents=f"Translate this into Kiswahili: {final_reply}"
+                        )
+                        final_reply = translated.text
                     return jsonify({
-                        "reply": response.text,
+                        "reply": final_reply,
                         "submenu": list(submenu.keys())
                     })
 
-        # Fallback for health-related queries
+        # Health-related free text queries
         if any(keyword in message.lower() for keyword in keywords):
             response = client.models.generate_content(
                 model="gemini-2.0-flash",
                 contents=message
             )
-            return jsonify({"reply": response.text})
+            final_reply = response.text
+            if user_context["language"] == "kiswahili":
+                translated = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=f"Translate this into Kiswahili: {final_reply}"
+                )
+                final_reply = translated.text
+            return jsonify({"reply": final_reply})
 
-        # Irrelevant query
+        # Fallback
         return jsonify({
             "reply": "Please use the buttons or ask about pregnancy, child health, or related services."
         })

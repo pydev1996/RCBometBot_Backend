@@ -12,29 +12,114 @@
 
   <style>
     body {
-      background-color: #CDC4F9;
+      margin: 0;
+      background: #f4f4f9;
       font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+     
     }
-   
+
+    .chat-container {
+      width: 100%;
+      max-width: 900px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 15px;
+      text-align: center;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .chat-header h4 {
+      margin: 0;
+      color: #5e4b8b;
+      font-weight: 600;
+    }
 
     .chat-box {
-      height: 400px;
+      flex: 1;
+      padding: 24px 20px;
       overflow-y: auto;
-      background-color: #f8f9fa;
-      border-radius: 15px;
-      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px; /* adds consistent vertical spacing */
+      
     }
 
-    .chat-message {
-      max-width: 75%;
+   
+
+    .message-wrapper {
+      display: flex;
+      align-items: flex-start;
+      position: relative;
+      z-index: 2; /* Ensure messages are above the overlay */
     }
 
-    .chat-input {
-      background-color: #fff;
+
+
+    .message-wrapper.user {
+      justify-content: flex-end;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      line-height: 1.4;
+      font-size: 15px;
+    }
+
+    .message.bot {
+      background-color: #f0f0f0;
+      color: #000;
+    }
+
+    .message.user {
+      background-color: #007bff;
+      color: #fff;
+    }
+
+    .chat-input-box {
+      display: flex;
       border-top: 1px solid #ddd;
-      padding: 10px;
-      border-bottom-left-radius: 15px;
-      border-bottom-right-radius: 15px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .chat-input-box input {
+      flex: 1;
+      padding: 10px 15px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      outline: none;
+    }
+
+    .chat-input-box button {
+      background: none;
+      border: none;
+      color: #007bff;
+      font-size: 20px;
+      margin-left: 10px;
+      cursor: pointer;
     }
 
     .btn-group-custom {
@@ -47,146 +132,128 @@
     .btn-option {
       background-color: #e9ecef;
       border: none;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 14px;
     }
 
     .btn-option:hover {
       background-color: #ced4da;
     }
-    .avatar {
-      width: 45px;
-      height: 45px;
-      object-fit: cover;
-      border-radius: 50%;
-      align-self: flex-start;
-    }
-
   </style>
 </head>
 <body>
 
-<div class="container-fluid py-5">
-  <div class="card" style="border-radius: 15px;">
-    <div class="card-body">
+  <div class="chat-container">
+    <div class="chat-header">
+      <h4>AfyamamaBot</h4>
+    </div>
 
-      <!-- Chat Header -->
-      <div class="text-center mb-3">
-        <h4 class="mb-0 text-primary">AfyamamaBot</h4>
-      </div>
+    <!-- Chat Box -->
+    <div class="chat-box" id="messages">
+      <!-- Dynamic messages will be appended here -->
+    </div>
 
-      <!-- Chat Box -->
-      <div class="chat-box mb-3 d-flex flex-column" id="messages">
-        <!-- Dynamic messages will be appended here -->
-      </div>
-
-      <!-- Message Input -->
-      <div class="chat-input d-flex align-items-center">
-        <img src="/static/images/afyamamaBot2.JPG" alt="avatar" style="width: 40px;">
-        <form id="chat-form" class="d-flex w-100 ms-2">
-          <input type="text" id="user-input" class="form-control me-2" placeholder="Type a message..." required />
-          <button type="submit" class="btn text-primary"><i class="fas fa-paper-plane"></i></button>
-        </form>
-      </div>
-
+    <!-- Message Input -->
+    <div class="chat-input-box">
+      <img src="/static/images/afyamamaBot2.JPG" alt="avatar" class="avatar">
+      <form id="chat-form" class="d-flex w-100 ms-2">
+        <input type="text" id="user-input" placeholder="Type a message..." required />
+        <button type="submit"><i class="fas fa-paper-plane"></i></button>
+      </form>
     </div>
   </div>
-</div>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
-  const form = document.getElementById("chat-form");
-  const input = document.getElementById("user-input");
-  const messages = document.getElementById("messages");
+  <script>
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("user-input");
+    const messages = document.getElementById("messages");
 
-  function addMessage(text, sender) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "d-flex flex-row justify-content-" + (sender === "user" ? "end" : "start") + " mb-4";
+    function addMessage(text, sender) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "message-wrapper " + sender;
 
-    const avatar = document.createElement("img");
-    avatar.src = sender === "user"
-  ? "https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava1-bg.webp"
-  : "/static/images/afyamamaBot2.JPG";
-    avatar.alt = "avatar";
-    avatar.style.width = "45px";
-    avatar.style.height = "45px";
-    avatar.style.objectFit = "cover";
-    avatar.style.borderRadius = "50%";
-    avatar.style.alignSelf = "flex-start";
+      const avatar = document.createElement("img");
+      avatar.src = sender === "user"
+        ? "https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava1-bg.webp"
+        : "/static/images/afyamamaBot2.JPG";
+      avatar.alt = "avatar";
+      avatar.className = "avatar";
 
+      const msg = document.createElement("div");
+      msg.className = `message ${sender}`;
+      msg.innerText = text;
 
-    const msgContainer = document.createElement("div");
-    msgContainer.className = "chat-message " + (sender === "user" ? "me-3" : "ms-3");
+      if (sender === "user") {
+        wrapper.appendChild(msg);
+        wrapper.appendChild(avatar);
+      } else {
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(msg);
+      }
 
-    const msg = document.createElement("p");
-    msg.className = `small p-2 mb-1 rounded-3 ${sender === "user" ? 'text-white bg-primary' : 'bg-body-tertiary'}`;
-    msg.innerText = text;
+      messages.appendChild(wrapper);
+      messages.scrollTop = messages.scrollHeight;
+    }
 
-    msgContainer.appendChild(msg);
-    wrapper.appendChild(sender === "user" ? msgContainer : avatar);
-    wrapper.appendChild(sender === "user" ? avatar : msgContainer);
+    function addButtons(options) {
+      const container = document.createElement("div");
+      container.className = "btn-group-custom";
 
-    messages.appendChild(wrapper);
-    messages.scrollTop = messages.scrollHeight;
-  }
+      options.forEach(option => {
+        const button = document.createElement("button");
+        button.className = "btn btn-option";
+        button.innerText = option;
+        button.onclick = (e) => {
+          e.preventDefault();
+          sendMessage(option);
+        };
+        container.appendChild(button);
+      });
 
-  function addButtons(options) {
-    const container = document.createElement("div");
-    container.className = "btn-group-custom";
+      messages.appendChild(container);
+      messages.scrollTop = messages.scrollHeight;
+    }
 
-    options.forEach(option => {
-      const button = document.createElement("button");
-      button.className = "btn btn-option";
-      button.innerText = option;
-      button.onclick = (e) => {
-        e.preventDefault();
-        sendMessage(option);
-      };
-      container.appendChild(button);
+    async function sendMessage(message) {
+      addMessage(message, "user");
+
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+
+      const data = await res.json();
+      const reply = data.reply;
+      const submenu = data.submenu || [];
+
+      addMessage(reply, "bot");
+
+      if (submenu.length > 0) {
+        addButtons(submenu);
+      }
+    }
+
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const message = input.value.trim();
+      if (message) {
+        sendMessage(message);
+        input.value = "";
+      }
     });
 
-    messages.appendChild(container);
-    messages.scrollTop = messages.scrollHeight;
-  }
-
-  async function sendMessage(message) {
-    addMessage(message, "user");
-
-    const res = await fetch("/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message })
-    });
-
-    const data = await res.json();
-    const reply = data.reply;
-    const submenu = data.submenu || [];
-
-    addMessage(reply, "bot");
-
-    if (submenu.length > 0) {
-      addButtons(submenu);
-    }
-  }
-
-  form.addEventListener("submit", e => {
-    e.preventDefault();
-    const message = input.value.trim();
-    if (message) {
-      sendMessage(message);
-      input.value = "";
-    }
-  });
-
-  window.onload = () => {
-    addMessage("👋 Welcome to Afyamamabot! I’m here to support your maternal and child health journey.", "bot");
-    setTimeout(() => {
-      sendMessage("menu");
-    }, 800);
-  };
-  avatar.className = "avatar";
-
-</script>
+    window.onload = () => {
+      addMessage("👋 Welcome to Afyamamabot! I’m here to support your maternal and child health journey.", "bot");
+      setTimeout(() => {
+        sendMessage("menu");
+      }, 800);
+    };
+  </script>
 
 </body>
 </html>
