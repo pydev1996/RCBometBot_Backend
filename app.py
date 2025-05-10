@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 from google import genai
 import os
+import spacy
 
 # Load environment variables from .env
 load_dotenv()
@@ -17,7 +18,7 @@ user_context = {
     "menu": "main",
     "language": "english"
 }
-
+nlp = spacy.load("en_core_web_sm")
 # Main menu and submenus
 main_menu = {
    "Pregnancy Tips": {
@@ -43,7 +44,7 @@ main_menu = {
         "Go Back": ""
     },
     "Emergency Help": {},
-    "Live Chat with Nurse": {},
+    # "Live Chat with Nurse": {},
     "Health Articles": {},
     "Book Appointment – Schedule a clinic or doctor visit": {
         "Antenatal Visit": "",
@@ -68,9 +69,69 @@ main_menu = {
 }
 
 keywords = [
-    "pregnancy", "child", "baby", "growth", "immunization", "antenatal", "postnatal",
-    "mental health", "nutrition", "family planning", "clinic", "appointment"
+    # Mother health
+    "pregnancy", "prenatal care", "antenatal", "postnatal", "postpartum", "maternal health",
+    "labor", "delivery", "childbirth", "c-section", "miscarriage", "stillbirth",
+    "breastfeeding", "lactation", "birth plan", "birth control", "contraception",
+    "family planning", "maternal nutrition", "prenatal vitamins", "iron supplements",
+    "folic acid", "morning sickness", "anemia", "high-risk pregnancy", "gynecology",
+    "women's health", "midwife", "doula", "ob-gyn", "maternal mental health",
+    "postpartum depression", "maternal checkup", "maternity leave","pregnant",
+
+    # Child health
+    "baby", "infant", "toddler", "child development", "child health", "immunization",
+    "vaccination", "growth chart", "milestones", "weaning", "formula feeding",
+    "pediatrician", "newborn care", "skin-to-skin contact", "colic", "jaundice",
+    "diaper rash", "teething", "sleep schedule", "feeding schedule", "child nutrition",
+    "stunting", "underweight", "malnutrition", "deworming", "vitamin a", "supplements",
+    "oral rehydration", "diarrhea", "fever", "cough", "flu", "measles", "polio",
+    "pneumonia", "neonatal care",
+
+    # Health services & support
+    "health tips", "clinic", "health facility", "nurse", "doctor", "appointment",
+    "vaccination schedule", "growth monitoring", "health worker", "outreach",
+    "health records", "checkup", "referral", "emergency care", "ambulance",
+    "mobile clinic", "insurance", "nhif", "m-pesa", "hospital", "maternal shelter",
+    "anc visits", "pnc visits","breathing", "wheezing", "shortness of breath", "asthma", "respiratory problem",
+"chest congestion", "cough", "bronchitis", "pneumonia", "difficulty breathing",# Mother Health
+    "pregnancy symptoms", "pregnancy test", "first trimester", "second trimester", "third trimester", "pregnancy complications",
+    "high blood pressure", "gestational diabetes", "preeclampsia", "labor pains", "induced labor", "epidural", "natural birth", "home birth",
+    "vaginal birth", "birth trauma", "pelvic floor", "postpartum care", "perineal tear", "Kegel exercises", "breast pump",
+    "baby blues", "perinatal depression", "parenting support", "postpartum care plan", "maternity clothing", "postpartum fitness",
+    "maternity support group", "mental health support", "lactation consultant", "birth recovery", "cesarean recovery",
+
+    # Child Health
+    "breastfeeding tips", "exclusive breastfeeding", "baby formula", "breast milk storage", "bottle feeding",
+    "baby food", "solid food introduction", "baby-led weaning", "milk allergy", "diapering tips", "baby massage", "infant reflexes",
+    "child vaccination schedule", "baby health checkup", "baby sleep patterns", "baby growth monitoring", "baby bonding",
+    "toddler tantrums", "toddler behavior", "child speech development", "developmental milestones", "motor skills", "gross motor skills", "fine motor skills",
+    "pediatric vaccinations", "baby ear infection", "hand-foot-and-mouth disease", "chickenpox", "diphtheria", "whooping cough", "tuberculosis", "yellow fever",
+    "child safety", "babyproofing", "childproofing home", "choking hazard", "car seat safety", "swaddle safety",
+
+    # Health Services & Support
+    "maternity ward", "obstetrician", "birth center", "antenatal care package", "health insurance coverage", "telemedicine", "family counseling",
+    "child health center", "pediatric clinic", "immunization drive", "nutrition education", "health campaigns", "well-baby visits", "support group for mothers",
+    "community health workers", "mobile health unit", "health education", "wellness check", "public health initiatives", "health outreach programs"
+
+
 ]
+
+def nlp_match(message, keywords):
+    # Process the message through spaCy NLP model
+    doc = nlp(message.lower())
+
+    # Check for keyword matches and named entities
+    for keyword in keywords:
+        if keyword in message.lower():
+            return True
+
+    # Optional: Check if the message contains specific named entities (e.g., pregnancy, healthcare, etc.)
+    for ent in doc.ents:
+        if ent.label_ in ['ORG', 'GPE', 'PERSON', 'MONEY']:  # You can change this based on your requirements
+            return True
+
+    return False
+
 greetings = ["hi", "hello", "hey", "good morning", "good evening", "howdy", "hola"]
 
 @app.route("/")
@@ -174,25 +235,45 @@ def chat():
                     })
 
         # Health-related free text queries
-        if any(keyword in message.lower() for keyword in keywords):
+        # if any(keyword in message.lower() for keyword in keywords):
+        #     response = client.models.generate_content(
+        #         model="gemini-2.0-flash",
+        #         contents=message
+        #     )
+        #     final_reply = response.text
+        #     if user_context["language"] == "kiswahili":
+        #         translated = client.models.generate_content(
+        #             model="gemini-2.0-flash",
+        #             contents=f"Translate this into Kiswahili: {final_reply}"
+        #         )
+        #         final_reply = translated.text
+        #     return jsonify({"reply": final_reply})
+
+        # # Fallback
+        # return jsonify({
+        #     "reply": "Please use the buttons or ask about pregnancy, child health, or related services."
+        # })
+        if nlp_match(message, keywords):
             response = client.models.generate_content(
                 model="gemini-2.0-flash",
                 contents=message
             )
             final_reply = response.text
+            
+            # Translate if required
             if user_context["language"] == "kiswahili":
                 translated = client.models.generate_content(
                     model="gemini-2.0-flash",
                     contents=f"Translate this into Kiswahili: {final_reply}"
                 )
                 final_reply = translated.text
+            
             return jsonify({"reply": final_reply})
 
-        # Fallback
+        # Fallback if no match is found
         return jsonify({
             "reply": "Please use the buttons or ask about pregnancy, child health, or related services."
         })
-
     except Exception as e:
         return jsonify({"reply": f"Error: {str(e)}"}), 500
 

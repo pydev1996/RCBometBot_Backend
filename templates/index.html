@@ -41,7 +41,7 @@
     .chat-header h4 {
       margin: 0;
       color: #5e4b8b;
-      font-weight: 600;
+      font-weight: 750;
     }
 
     .chat-box {
@@ -136,9 +136,11 @@
 </head>
 <body>
   <div class="chat-container">
-    <div class="chat-header">
-      <h4>AfyamamaBot</h4>
+   <div class="chat-header">
+      <img src="/static/images/afyamama.jpg" alt="Afya MamaBot Logo" style="height: 50px;width:50px;border-radius: 10%; vertical-align: middle; margin-right: 10px;">
+      <h4 style="display: inline-block; vertical-align: middle;">AfyamamaBot</h4>
     </div>
+
 
     <div class="chat-box" id="messages"></div>
 
@@ -165,7 +167,7 @@
 
       const avatar = document.createElement("img");
       avatar.src = sender === "user"
-        ? "https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava1-bg.webp"
+        ? "static/images/Afyamama2.jpg"
         : "/static/images/afyamamaBot2.JPG";
       avatar.alt = "avatar";
       avatar.className = "avatar";
