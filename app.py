@@ -3,6 +3,14 @@ from dotenv import load_dotenv
 from google import genai
 import os
 import spacy
+import subprocess
+
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
+    nlp = spacy.load("en_core_web_sm")
+
 
 # Load environment variables from .env
 load_dotenv()
