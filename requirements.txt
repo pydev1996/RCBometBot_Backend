@@ -9,3 +9,4 @@ dotenv
 google-generativeai
 anyio
 httpx
+spacy
